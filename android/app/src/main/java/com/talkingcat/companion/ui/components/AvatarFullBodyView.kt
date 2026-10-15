@@ -1,0 +1,165 @@
+package com.talkingcat.companion.ui.components
+
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
+import com.talkingcat.companion.audio.EngineState
+import com.talkingcat.companion.data.AvatarModel
+import kotlin.math.max
+
+@Composable
+fun AvatarFullBodyView(
+    avatar: AvatarModel,
+    state: EngineState,
+    audioLevel: Float,
+    isBlinking: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val isSpeaking = state == EngineState.SPEAKING
+    val isRecording = state == EngineState.RECORDING
+
+    // Gentle floating breathing animation
+    val infiniteTransition = rememberInfiniteTransition(label = "float")
+    val floatOffset by infiniteTransition.animateFloat(
+        initialValue = -5f,
+        targetValue = 5f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "offsetY"
+    )
+
+    // Dynamic mouth height based on playback volume
+    val dynamicMouthHeightDp = max(4f, audioLevel * 28f)
+    val isMouthOpen = isSpeaking && audioLevel > 0.12f
+
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        // Full Body Character Frame
+        Box(
+            modifier = Modifier
+                .offset(y = floatOffset.dp)
+                .fillMaxWidth(0.85f)
+                .aspectRatio(3f / 4f)
+                .shadow(16.dp, RoundedCornerShape(28.dp))
+                .clip(RoundedCornerShape(28.dp))
+                .background(Color.White.copy(alpha = 0.2f))
+                .border(
+                    width = 3.dp,
+                    color = if (isSpeaking) Color(0xFFF43F5E) else if (isRecording) Color(0xFF10B981) else Color.White,
+                    shape = RoundedCornerShape(28.dp)
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                val boxWidth = maxWidth
+                val boxHeight = maxHeight
+
+                // 1. High-resolution full-body realistic character image
+                Image(
+                    painter = painterResource(id = avatar.imageRes),
+                    contentDescription = avatar.name,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+
+                // 2. Real-time Audio-Reactive Mouth Sync Overlay
+                val coords = avatar.faceCoords
+                val mouthXDp = boxWidth * (coords.mouthXPercent / 100f)
+                val mouthYDp = boxHeight * (coords.mouthYPercent / 100f)
+                val mouthWidthDp = boxWidth * (coords.mouthWidthPercent / 100f)
+
+                if (isMouthOpen) {
+                    Box(
+                        modifier = Modifier
+                            .offset(
+                                x = mouthXDp - (mouthWidthDp / 2),
+                                y = mouthYDp - (dynamicMouthHeightDp.dp / 2)
+                            )
+                            .width(mouthWidthDp)
+                            .height(dynamicMouthHeightDp.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(Color(0xFF1C1917))
+                            .border(1.dp, Color(0xFF292524), RoundedCornerShape(50)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        // Upper Teeth Line
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .fillMaxWidth(0.7f)
+                                .height(max(2f, dynamicMouthHeightDp * 0.25f).dp)
+                                .background(Color(0xFFFEF3C7), RoundedCornerShape(bottomStart = 2.dp, bottomEnd = 2.dp))
+                        )
+                        // Tongue
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .fillMaxWidth(0.6f)
+                                .height(max(2f, dynamicMouthHeightDp * 0.45f).dp)
+                                .background(Color(0xFFF43F5E), RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
+                        )
+                    }
+                }
+
+                // 3. Dynamic Natural Eyelid Blink Overlay
+                if (isBlinking) {
+                    val leftEyeXDp = boxWidth * (coords.leftEyeXPercent / 100f)
+                    val rightEyeXDp = boxWidth * (coords.rightEyeXPercent / 100f)
+                    val eyeYDp = boxHeight * (coords.eyeYPercent / 100f)
+                    val eyeSize = 14.dp
+
+                    // Left Eye
+                    Box(
+                        modifier = Modifier
+                            .offset(x = leftEyeXDp - (eyeSize / 2), y = eyeYDp - 2.dp)
+                            .size(eyeSize, 3.dp)
+                            .background(Color(0xFF292524), RoundedCornerShape(50))
+                    )
+                    // Right Eye
+                    Box(
+                        modifier = Modifier
+                            .offset(x = rightEyeXDp - (eyeSize / 2), y = eyeYDp - 2.dp)
+                            .size(eyeSize, 3.dp)
+                            .background(Color(0xFF292524), RoundedCornerShape(50))
+                    )
+                }
+            }
+        }
+
+        // Realistic Contact Floor Shadow
+        Box(
+            modifier = Modifier
+                .padding(top = 4.dp)
+                .width(180.dp)
+                .height(10.dp)
+                .scale(scaleX = 1f, scaleY = 0.5f)
+                .background(
+                    Brush.radialGradient(
+                        colors = listOf(Color.Black.copy(alpha = 0.25f), Color.Transparent)
+                    ),
+                    CircleShape
+                )
+        )
+    }
+}

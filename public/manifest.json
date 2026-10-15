@@ -1,0 +1,23 @@
+{
+  "short_name": "Talking Buddies",
+  "name": "Talking Buddies Companion",
+  "icons": [
+    {
+      "src": "avatars/male-cat.jpg",
+      "type": "image/jpeg",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "avatars/male-cat.jpg",
+      "type": "image/jpeg",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "./",
+  "background_color": "#FEF3C7",
+  "theme_color": "#EA580C",
+  "display": "standalone",
+  "orientation": "portrait"
+}

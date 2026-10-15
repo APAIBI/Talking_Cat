@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">Talking Buddies</string>
+    <string name="state_listening">👂 I\'m listening! Say anything!</string>
+    <string name="state_recording">🎙️ I hear you! Keep talking...</string>
+    <string name="state_processing">✨ Getting funny voice ready...</string>
+    <string name="state_speaking">📢 Listen! I am repeating you!</string>
+    <string name="permission_rationale">Please allow microphone permission to talk with your companion!</string>
+</resources>
