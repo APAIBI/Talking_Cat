@@ -16,21 +16,21 @@ export function AvatarSelector({ activeAvatar, onSelectAvatar, onPlayPop }) {
                   onSelectAvatar(avatar);
                 }
               }}
-              className={`relative group flex items-center gap-2 p-2 rounded-2xl transition-all duration-300 transform active:scale-95 ${
+              className={`relative group flex items-center gap-2.5 p-2 rounded-2xl transition-all duration-300 transform active:scale-95 ${
                 isSelected
-                  ? `${avatar.colorTheme.cardBg} text-white shadow-lg ring-3 ring-white -translate-y-0.5 scale-102`
+                  ? `${avatar.colorTheme.cardBg} text-white shadow-xl ring-4 ring-white -translate-y-1 scale-102`
                   : 'bg-white/85 hover:bg-white text-slate-700 shadow-md hover:shadow-lg border-2 border-slate-100 hover:-translate-y-0.5'
               }`}
             >
-              {/* Selected Badge */}
+              {/* Active Badge */}
               {isSelected && (
-                <span className="absolute -top-2 -right-1 bg-yellow-400 text-yellow-950 font-bold text-[10px] px-1.5 py-0.2 rounded-full shadow border border-white">
+                <span className="absolute -top-2.5 -right-1 bg-amber-400 text-amber-950 font-bold text-[10px] px-2 py-0.5 rounded-full shadow border-2 border-white animate-bounce-gentle">
                   ★ Active
                 </span>
               )}
 
               {/* Character Realistic Mini Thumbnail */}
-              <div className="w-12 h-14 rounded-xl overflow-hidden shadow-inner border border-white/50 flex-shrink-0 bg-slate-100">
+              <div className="w-12 h-14 rounded-xl overflow-hidden shadow-inner border border-white/60 flex-shrink-0 bg-slate-100">
                 <img
                   src={avatar.imageSrc}
                   alt={avatar.name}
@@ -38,7 +38,7 @@ export function AvatarSelector({ activeAvatar, onSelectAvatar, onPlayPop }) {
                 />
               </div>
 
-              {/* Text Info */}
+              {/* Name & Voice Style Info */}
               <div className="flex flex-col text-left overflow-hidden">
                 <span
                   className={`font-bold text-xs sm:text-sm truncate leading-tight ${

@@ -34,11 +34,11 @@ fun AvatarFullBodyView(
     val isSpeaking = state == EngineState.SPEAKING
     val isRecording = state == EngineState.RECORDING
 
-    // Gentle floating breathing animation
+    // Gentle floating breathing rhythm
     val infiniteTransition = rememberInfiniteTransition(label = "float")
     val floatOffset by infiniteTransition.animateFloat(
-        initialValue = -5f,
-        targetValue = 5f,
+        initialValue = -4f,
+        targetValue = 4f,
         animationSpec = infiniteRepeatable(
             animation = tween(2200, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
@@ -46,9 +46,10 @@ fun AvatarFullBodyView(
         label = "offsetY"
     )
 
-    // Dynamic mouth height based on playback volume
-    val dynamicMouthHeightDp = max(4f, audioLevel * 28f)
-    val isMouthOpen = isSpeaking && audioLevel > 0.12f
+    // Dynamic realistic mouth opening
+    val dynamicMouthHeightDp = max(3f, audioLevel * 24f)
+    val isMouthOpen = isSpeaking && audioLevel > 0.08f
+    val jawDropDp = if (isSpeaking) audioLevel * 2.2f else 0f
 
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -75,7 +76,7 @@ fun AvatarFullBodyView(
                 val boxWidth = maxWidth
                 val boxHeight = maxHeight
 
-                // 1. High-resolution full-body realistic character image
+                // High-resolution realistic character base image
                 Image(
                     painter = painterResource(id = avatar.imageRes),
                     contentDescription = avatar.name,
@@ -83,71 +84,78 @@ fun AvatarFullBodyView(
                     modifier = Modifier.fillMaxSize()
                 )
 
-                // 2. Real-time Audio-Reactive Mouth Sync Overlay
                 val coords = avatar.faceCoords
                 val mouthXDp = boxWidth * (coords.mouthXPercent / 100f)
                 val mouthYDp = boxHeight * (coords.mouthYPercent / 100f)
                 val mouthWidthDp = boxWidth * (coords.mouthWidthPercent / 100f)
 
+                // Realistic Organic Mouth & Jaw Articulation
                 if (isMouthOpen) {
                     Box(
                         modifier = Modifier
                             .offset(
                                 x = mouthXDp - (mouthWidthDp / 2),
-                                y = mouthYDp - (dynamicMouthHeightDp.dp / 2)
+                                y = mouthYDp - (dynamicMouthHeightDp.dp / 2) + jawDropDp.dp
                             )
                             .width(mouthWidthDp)
                             .height(dynamicMouthHeightDp.dp)
                             .clip(RoundedCornerShape(50))
-                            .background(Color(0xFF1C1917))
-                            .border(1.dp, Color(0xFF292524), RoundedCornerShape(50)),
+                            .background(
+                                Brush.radialGradient(
+                                    colors = listOf(Color(0xFF380C0C), Color(0xFF170707))
+                                )
+                            )
+                            .border(0.8.dp, Color(0xFF4A1515), RoundedCornerShape(50)),
                         contentAlignment = Alignment.Center
                     ) {
-                        // Upper Teeth Line
+                        // Upper Teeth Arch
                         Box(
                             modifier = Modifier
                                 .align(Alignment.TopCenter)
-                                .fillMaxWidth(0.7f)
-                                .height(max(2f, dynamicMouthHeightDp * 0.25f).dp)
-                                .background(Color(0xFFFEF3C7), RoundedCornerShape(bottomStart = 2.dp, bottomEnd = 2.dp))
+                                .fillMaxWidth(0.75f)
+                                .height(max(2f, dynamicMouthHeightDp * 0.26f).dp)
+                                .background(Color(0xFFFFFBEB), RoundedCornerShape(bottomStart = 2.dp, bottomEnd = 2.dp))
                         )
                         // Tongue
                         Box(
                             modifier = Modifier
                                 .align(Alignment.BottomCenter)
                                 .fillMaxWidth(0.6f)
-                                .height(max(2f, dynamicMouthHeightDp * 0.45f).dp)
-                                .background(Color(0xFFF43F5E), RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
+                                .height(max(2f, dynamicMouthHeightDp * 0.42f).dp)
+                                .background(
+                                    Brush.verticalGradient(
+                                        colors = listOf(Color(0xFFFB7185), Color(0xFFE11D48))
+                                    ),
+                                    RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp)
+                                )
                         )
                     }
                 }
 
-                // 3. Dynamic Natural Eyelid Blink Overlay
+                // Natural Eyelid Blink Overlay
                 if (isBlinking) {
                     val leftEyeXDp = boxWidth * (coords.leftEyeXPercent / 100f)
                     val rightEyeXDp = boxWidth * (coords.rightEyeXPercent / 100f)
                     val eyeYDp = boxHeight * (coords.eyeYPercent / 100f)
-                    val eyeSize = 14.dp
+                    val eyeSize = 13.dp
 
-                    // Left Eye
                     Box(
                         modifier = Modifier
-                            .offset(x = leftEyeXDp - (eyeSize / 2), y = eyeYDp - 2.dp)
-                            .size(eyeSize, 3.dp)
-                            .background(Color(0xFF292524), RoundedCornerShape(50))
+                            .offset(x = leftEyeXDp - (eyeSize / 2), y = eyeYDp - 1.5.dp)
+                            .size(eyeSize, 2.5.dp)
+                            .background(Color(0xFF1C1917), RoundedCornerShape(50))
                     )
-                    // Right Eye
                     Box(
                         modifier = Modifier
-                            .offset(x = rightEyeXDp - (eyeSize / 2), y = eyeYDp - 2.dp)
-                            .size(eyeSize, 3.dp)
-                            .background(Color(0xFF292524), RoundedCornerShape(50))
+                            .offset(x = rightEyeXDp - (eyeSize / 2), y = eyeYDp - 1.5.dp)
+                            .size(eyeSize, 2.5.dp)
+                            .background(Color(0xFF1C1917), RoundedCornerShape(50))
                     )
                 }
             }
         }
 
-        // Realistic Contact Floor Shadow
+        // Realistic Floor Contact Shadow
         Box(
             modifier = Modifier
                 .padding(top = 4.dp)

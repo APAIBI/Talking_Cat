@@ -12,47 +12,48 @@ export const APP_STATE = {
 };
 
 /**
- * Custom Hook: Continuous Autonomous Talkback Engine
- * Implements no-tap voice activity detection (VAD), silence detection,
- * pitch-shifted mimicry playback, and real-time audio metering.
+ * Enhanced Continuous Autonomous Talkback Engine with Robust Background Noise Cancellation:
+ * - High-pass pre-filtering (160 Hz) to eliminate HVAC hum, table bumps, and room rumble.
+ * - Dynamic Noise Floor tracking with Hysteresis.
+ * - Sustained Speech Onset Validator (requires 220ms of sustained voice energy to eliminate transient noise/clicks).
+ * - High Speech-to-Noise Ratio (SNR) thresholding.
  */
 export function useAudioTalkback({
   avatarConfig,
-  customVoiceSettings,
   autoListen = true,
 }) {
   const [appState, setAppState] = useState(APP_STATE.UNINITIALIZED);
-  const [audioLevel, setAudioLevel] = useState(0); // 0.0 to 1.0 for visualizer & mouth
+  const [audioLevel, setAudioLevel] = useState(0); // 0.0 to 1.0 for mouth & visualizer
   const [errorMessage, setErrorMessage] = useState(null);
 
-  // References to preserve instances across renders
+  // Audio Context & Nodes
   const audioCtxRef = useRef(null);
   const micStreamRef = useRef(null);
   const micSourceRef = useRef(null);
+  const micFilterRef = useRef(null);
   const micAnalyserRef = useRef(null);
   const playbackAnalyserRef = useRef(null);
   const scriptProcessorRef = useRef(null);
 
-  // Buffering and VAD refs
+  // VAD & Buffering refs
   const recordedChunksRef = useRef([]);
   const isSpeakingRef = useRef(false);
+  const candidateSpeechStartRef = useRef(0);
   const speechStartTimeRef = useRef(0);
   const silenceStartTimeRef = useRef(0);
   const animationFrameRef = useRef(null);
-  const noiseFloorRef = useRef(0.015);
+  const noiseFloorRef = useRef(0.02);
   const activePlaybackSourceRef = useRef(null);
   const activeFxCleanupRef = useRef(null);
 
-  // Dynamic parameters from avatar and custom settings
-  const pitchFactor = customVoiceSettings?.pitch ?? avatarConfig.defaultPitch ?? 1.6;
-  const speedFactor = customVoiceSettings?.speed ?? avatarConfig.defaultSpeed ?? 1.15;
-  const robotMode = customVoiceSettings?.robot ?? avatarConfig.defaultRobot ?? false;
-  const echoMode = customVoiceSettings?.echo ?? avatarConfig.defaultEcho ?? false;
-  const formantHz = customVoiceSettings?.formantBoostHz ?? 2600;
-  const resonance = customVoiceSettings?.resonance ?? 3.0;
+  // Voice parameters tailored strictly to avatar profile
+  const pitchFactor = avatarConfig.voiceProfile?.pitch ?? 1.0;
+  const speedFactor = avatarConfig.voiceProfile?.speed ?? 1.0;
+  const formantHz = avatarConfig.voiceProfile?.formantHz ?? 2400;
+  const resonance = avatarConfig.voiceProfile?.resonance ?? 2.0;
 
   /**
-   * Initialize AudioContext and Microphone stream
+   * Start listening with hardware echo cancellation, noise suppression & auto gain
    */
   const startListening = useCallback(async () => {
     try {
@@ -72,25 +73,35 @@ export function useAudioTalkback({
             echoCancellation: true,
             noiseSuppression: true,
             autoGainControl: true,
+            channelCount: 1,
+            sampleRate: 44100,
           },
           video: false,
         });
 
         micStreamRef.current = stream;
 
-        // Microphone input node & analyser
+        // Source node from mic stream
         const source = ctx.createMediaStreamSource(stream);
         micSourceRef.current = source;
 
+        // High-pass filter to discard low rumbles, wind, and ambient floor hum
+        const hpFilter = ctx.createBiquadFilter();
+        hpFilter.type = 'highpass';
+        hpFilter.frequency.setValueAtTime(160, ctx.currentTime);
+        micFilterRef.current = hpFilter;
+
+        source.connect(hpFilter);
+
+        // Analyser node for VAD
         const analyser = ctx.createAnalyser();
         analyser.fftSize = 512;
-        analyser.smoothingTimeConstant = 0.3;
+        analyser.smoothingTimeConstant = 0.35;
         micAnalyserRef.current = analyser;
 
-        source.connect(analyser);
+        hpFilter.connect(analyser);
 
-        // Raw audio sample recorder via ScriptProcessor (4096 buffer size)
-        // Works deterministically across all desktop Chromium / Electron versions
+        // ScriptProcessor recorder (4096 buffer size)
         const processor = ctx.createScriptProcessor(4096, 1, 1);
         scriptProcessorRef.current = processor;
 
@@ -102,7 +113,8 @@ export function useAudioTalkback({
         };
 
         source.connect(processor);
-        // Connect to a mute gain so processor continues firing without mic feedback
+
+        // Silent sink to keep processor pumping without loopback feedback
         const muteGain = ctx.createGain();
         muteGain.gain.setValueAtTime(0, ctx.currentTime);
         processor.connect(muteGain);
@@ -119,7 +131,7 @@ export function useAudioTalkback({
   }, []);
 
   /**
-   * Stop all audio streams and nodes
+   * Stop all active nodes
    */
   const stopAll = useCallback(() => {
     if (animationFrameRef.current) {
@@ -139,6 +151,10 @@ export function useAudioTalkback({
       scriptProcessorRef.current.disconnect();
       scriptProcessorRef.current = null;
     }
+    if (micFilterRef.current) {
+      micFilterRef.current.disconnect();
+      micFilterRef.current = null;
+    }
     if (micSourceRef.current) {
       micSourceRef.current.disconnect();
       micSourceRef.current = null;
@@ -155,7 +171,7 @@ export function useAudioTalkback({
   }, []);
 
   /**
-   * Playback recorded audio with pitch-shift and formant modulation
+   * Play altered talkback voice
    */
   const playAlteredVoice = useCallback(async (audioBuffer) => {
     const ctx = audioCtxRef.current;
@@ -164,30 +180,26 @@ export function useAudioTalkback({
     setAppState(APP_STATE.SPEAKING);
 
     try {
-      // 1. Resample pitch and speed (produces signature chipmunk / cartoon pitch)
       const resampledBuffer = await createResampledBuffer(ctx, audioBuffer, pitchFactor, speedFactor);
 
-      // 2. Create buffer source
       const bufferSource = ctx.createBufferSource();
       bufferSource.buffer = resampledBuffer;
       activePlaybackSourceRef.current = bufferSource;
 
-      // 3. Playback analyser (for animating mouth in sync with character voice)
+      // Playback analyser to drive mouth animation
       const playAnalyser = ctx.createAnalyser();
       playAnalyser.fftSize = 256;
       playAnalyser.smoothingTimeConstant = 0.2;
       playbackAnalyserRef.current = playAnalyser;
 
-      // 4. Formant filter chain + FX
       const { outputNode, cleanup } = applyVocalFormantAndFX(ctx, bufferSource, {
         formantHz,
         resonance,
-        robot: robotMode,
-        echo: echoMode,
+        robot: false,
+        echo: false,
       });
       activeFxCleanupRef.current = cleanup;
 
-      // Connect to analyser and then speaker destination
       outputNode.connect(playAnalyser);
       playAnalyser.connect(ctx.destination);
 
@@ -197,9 +209,10 @@ export function useAudioTalkback({
         activeFxCleanupRef.current = null;
         playbackAnalyserRef.current = null;
 
-        // Reset buffer and return autonomously to LISTENING state
+        // Reset buffers and resume listening autonomously
         recordedChunksRef.current = [];
         isSpeakingRef.current = false;
+        candidateSpeechStartRef.current = 0;
         silenceStartTimeRef.current = 0;
         speechStartTimeRef.current = 0;
         setAudioLevel(0);
@@ -211,10 +224,10 @@ export function useAudioTalkback({
       console.error('Voice playback error:', err);
       setAppState(APP_STATE.LISTENING);
     }
-  }, [pitchFactor, speedFactor, formantHz, resonance, robotMode, echoMode]);
+  }, [pitchFactor, speedFactor, formantHz, resonance]);
 
   /**
-   * Assemble recorded raw Float32Array chunks into an AudioBuffer
+   * Process recorded chunks
    */
   const processRecordedAudio = useCallback(() => {
     const ctx = audioCtxRef.current;
@@ -228,21 +241,19 @@ export function useAudioTalkback({
     setAppState(APP_STATE.PROCESSING);
     playCaptureChime(ctx);
 
-    // Calculate total sample count
     let totalLength = 0;
     for (let i = 0; i < chunks.length; i++) {
       totalLength += chunks[i].length;
     }
 
-    // Safety: ignore recordings shorter than 0.3s (coughs/clicks)
-    const minSamples = Math.floor(ctx.sampleRate * 0.3);
+    // Discard any sound shorter than 0.35s (transients / chair creaks / coughs)
+    const minSamples = Math.floor(ctx.sampleRate * 0.35);
     if (totalLength < minSamples) {
       recordedChunksRef.current = [];
       setAppState(APP_STATE.LISTENING);
       return;
     }
 
-    // Merge into single Float32Array
     const merged = new Float32Array(totalLength);
     let offset = 0;
     for (let i = 0; i < chunks.length; i++) {
@@ -250,19 +261,15 @@ export function useAudioTalkback({
       offset += chunks[i].length;
     }
 
-    // Create AudioBuffer
     const audioBuffer = ctx.createBuffer(1, totalLength, ctx.sampleRate);
     audioBuffer.copyToChannel(merged, 0);
 
-    // Reset chunks
     recordedChunksRef.current = [];
-
-    // Trigger playback
     playAlteredVoice(audioBuffer);
   }, [playAlteredVoice]);
 
   /**
-   * Main Real-Time VAD (Voice Activity Detection) & Visualizer Loop
+   * Main Real-Time VAD Loop with Noise Rejection & Sustained Speech Verification
    */
   useEffect(() => {
     const dataArray = new Uint8Array(256);
@@ -270,7 +277,7 @@ export function useAudioTalkback({
     const updateLoop = () => {
       const now = performance.now();
 
-      // Case A: Playing back speech (drive mouth & visuals from playback analyser)
+      // Case A: Talkback Playback
       if (appState === APP_STATE.SPEAKING && playbackAnalyserRef.current) {
         playbackAnalyserRef.current.getByteFrequencyData(dataArray);
         let sum = 0;
@@ -278,14 +285,13 @@ export function useAudioTalkback({
           sum += dataArray[i];
         }
         const avg = sum / dataArray.length;
-        const normalized = Math.min(1.0, (avg / 128) * 1.5);
+        const normalized = Math.min(1.0, (avg / 120) * 1.5);
         setAudioLevel(normalized);
       }
-      // Case B: Listening / Recording via microphone
+      // Case B: Listening / Recording via mic with Strict Noise Rejection
       else if ((appState === APP_STATE.LISTENING || appState === APP_STATE.RECORDING) && micAnalyserRef.current) {
         micAnalyserRef.current.getByteTimeDomainData(dataArray);
 
-        // Compute RMS energy
         let sumSquares = 0;
         for (let i = 0; i < dataArray.length; i++) {
           const val = (dataArray[i] - 128) / 128;
@@ -293,38 +299,53 @@ export function useAudioTalkback({
         }
         const rms = Math.sqrt(sumSquares / dataArray.length);
 
-        // Slowly track ambient noise floor
-        noiseFloorRef.current = noiseFloorRef.current * 0.98 + rms * 0.02;
-        const speechThreshold = Math.max(0.025, noiseFloorRef.current * 2.5);
+        // Stable ambient noise floor tracker (slow adapt, ignores speech spikes)
+        if (!isSpeakingRef.current) {
+          noiseFloorRef.current = noiseFloorRef.current * 0.99 + rms * 0.01;
+        }
 
-        // Visual level normalized for UI meter
-        const visualLevel = Math.min(1.0, rms * 10);
+        // Hysteresis threshold: Onset is strict, continuation is forgiving
+        const speechOnsetThreshold = Math.max(0.045, noiseFloorRef.current * 3.4);
+        const speechContinuationThreshold = Math.max(0.025, noiseFloorRef.current * 2.0);
+
+        // Visualizer level
+        const visualLevel = Math.min(1.0, Math.max(0, (rms - noiseFloorRef.current) * 12));
         setAudioLevel(visualLevel);
 
-        const isVoiceActive = rms > speechThreshold;
-
-        if (isVoiceActive) {
-          // Voice has started!
-          if (!isSpeakingRef.current) {
-            isSpeakingRef.current = true;
-            speechStartTimeRef.current = now;
-            recordedChunksRef.current = []; // Start fresh recording
-            setAppState(APP_STATE.RECORDING);
-          }
-          silenceStartTimeRef.current = 0;
-
-          // Maximum safety cap: 12 seconds per turn to prevent overflowing memory
-          if (now - speechStartTimeRef.current > 12000) {
-            isSpeakingRef.current = false;
-            processRecordedAudio();
+        if (!isSpeakingRef.current) {
+          // Check for sustained voice onset (must exceed threshold for >= 200ms)
+          if (rms > speechOnsetThreshold) {
+            if (candidateSpeechStartRef.current === 0) {
+              candidateSpeechStartRef.current = now;
+            } else if (now - candidateSpeechStartRef.current > 200) {
+              // Sustained child speech confirmed! Start recording
+              isSpeakingRef.current = true;
+              speechStartTimeRef.current = now;
+              candidateSpeechStartRef.current = 0;
+              recordedChunksRef.current = [];
+              setAppState(APP_STATE.RECORDING);
+            }
+          } else {
+            candidateSpeechStartRef.current = 0;
           }
         } else {
-          // Silence detected
-          if (isSpeakingRef.current) {
+          // Already recording: monitor for silence or speech continuation
+          const isStillSpeaking = rms > speechContinuationThreshold;
+
+          if (isStillSpeaking) {
+            silenceStartTimeRef.current = 0;
+
+            // Maximum safe utterance cap (12s)
+            if (now - speechStartTimeRef.current > 12000) {
+              isSpeakingRef.current = false;
+              processRecordedAudio();
+            }
+          } else {
+            // Below continuation threshold -> count silence
             if (silenceStartTimeRef.current === 0) {
               silenceStartTimeRef.current = now;
-            } else if (now - silenceStartTimeRef.current > 850) {
-              // 850ms of continuous silence after speech -> End of turn!
+            } else if (now - silenceStartTimeRef.current > 900) {
+              // 900ms of true silence -> Speech turn completed!
               isSpeakingRef.current = false;
               silenceStartTimeRef.current = 0;
               processRecordedAudio();
@@ -345,7 +366,6 @@ export function useAudioTalkback({
     };
   }, [appState, processRecordedAudio]);
 
-  // Handle auto-listen on mount
   useEffect(() => {
     if (autoListen) {
       startListening();

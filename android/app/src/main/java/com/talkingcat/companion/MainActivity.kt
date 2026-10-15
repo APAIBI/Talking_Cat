@@ -9,14 +9,22 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.talkingcat.companion.ui.components.*
 import com.talkingcat.companion.ui.theme.TalkingCompanionTheme
@@ -86,9 +94,8 @@ fun TalkingAppScreen(
     val activeAvatar by viewModel.activeAvatar.collectAsState()
     val engineState by viewModel.engineState.collectAsState()
     val audioLevel by viewModel.audioLevel.collectAsState()
-    val pitch by viewModel.pitch.collectAsState()
-    val activePresetId by viewModel.activePresetId.collectAsState()
     val isBlinking by viewModel.isBlinking.collectAsState()
+    val isLocked by viewModel.isLocked.collectAsState()
 
     Scaffold { paddingValues ->
         Box(
@@ -101,6 +108,7 @@ fun TalkingAppScreen(
                 )
                 .padding(paddingValues)
         ) {
+            // Main Content Layer
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -108,11 +116,45 @@ fun TalkingAppScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
-                // Top: Status Pill
-                StatusBadge(
-                    state = engineState,
-                    modifier = Modifier.padding(top = 8.dp)
-                )
+                // Top: Status Badge + Toddler Lock Button
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp, start = 4.dp, end = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    StatusBadge(
+                        state = engineState,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    // Lock Screen Button for Toddler
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Color(0xFFFBBF24))
+                            .border(1.5.dp, Color.White, RoundedCornerShape(16.dp))
+                            .clickable { viewModel.setLocked(true) }
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(text = "🔒", fontSize = 14.sp)
+                            Text(
+                                text = "Lock",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF78350F)
+                            )
+                        }
+                    }
+                }
 
                 // Center: Realistic Full-Body Avatar & Audio Visualizer
                 Column(
@@ -138,25 +180,19 @@ fun TalkingAppScreen(
                     )
                 }
 
-                // Bottom Control Deck: Character Switcher & Voice Magic Modulator
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    AvatarSelectorRow(
-                        activeAvatar = activeAvatar,
-                        onAvatarSelected = { viewModel.selectAvatar(it) }
-                    )
-
-                    VoiceModulatorCard(
-                        currentPitch = pitch,
-                        activePresetId = activePresetId,
-                        onPitchChanged = { viewModel.setCustomPitch(it) },
-                        onPresetSelected = { viewModel.selectPreset(it) },
-                        onReset = { viewModel.resetToAvatarDefaults() }
-                    )
-                }
+                // Bottom: Avatar Switcher (Clean, no pitch sliders)
+                AvatarSelectorRow(
+                    activeAvatar = activeAvatar,
+                    onAvatarSelected = { viewModel.selectAvatar(it) },
+                    modifier = Modifier.padding(bottom = 6.dp)
+                )
             }
+
+            // Toddler Lock Screen (Renders over screen when locked, keeping speech talkback active)
+            ToddlerLockView(
+                isLocked = isLocked,
+                onUnlock = { viewModel.setLocked(false) }
+            )
         }
     }
 }

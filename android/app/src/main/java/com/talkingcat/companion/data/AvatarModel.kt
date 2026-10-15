@@ -19,8 +19,8 @@ data class AvatarModel(
     val species: String,
     val icon: String,
     @DrawableRes val imageRes: Int,
-    val defaultPitch: Float,
-    val defaultSpeed: Float,
+    val naturalPitch: Float,
+    val naturalSpeed: Float,
     val faceCoords: AvatarFaceCoords,
     val gradientColors: List<Color>,
     val primaryColor: Color
@@ -28,79 +28,83 @@ data class AvatarModel(
 
 val AVATAR_LIST = listOf(
     AvatarModel(
-        id = "male_cat",
-        name = "Leo the Cat",
-        species = "Male Ginger Cat",
+        id = "rocky",
+        name = "Rocky",
+        species = "Siberian Husky",
+        icon = "🐺",
+        imageRes = R.drawable.rocky,
+        // Human male voice
+        naturalPitch = 0.82f,
+        naturalSpeed = 0.98f,
+        faceCoords = AvatarFaceCoords(
+            mouthXPercent = 48.5f,
+            mouthYPercent = 24.5f,
+            mouthWidthPercent = 8.0f,
+            leftEyeXPercent = 44.5f,
+            rightEyeXPercent = 53.0f,
+            eyeYPercent = 17.5f
+        ),
+        gradientColors = listOf(Color(0xFFE2E8F0), Color(0xFFBAE6FD), Color(0xFFE0E7FF)),
+        primaryColor = Color(0xFF0284C7)
+    ),
+    AvatarModel(
+        id = "kelvin",
+        name = "Kelvin",
+        species = "Silver Male Cat",
         icon = "🐱",
-        imageRes = R.drawable.male_cat,
-        defaultPitch = 1.62f,
-        defaultSpeed = 1.15f,
+        imageRes = R.drawable.kelvin,
+        // Human male teenager voice
+        naturalPitch = 1.08f,
+        naturalSpeed = 1.02f,
         faceCoords = AvatarFaceCoords(
-            mouthXPercent = 50.5f,
-            mouthYPercent = 26.2f,
-            mouthWidthPercent = 9.0f,
-            leftEyeXPercent = 46.0f,
-            rightEyeXPercent = 55.0f,
-            eyeYPercent = 21.0f
+            mouthXPercent = 48.2f,
+            mouthYPercent = 21.6f,
+            mouthWidthPercent = 7.8f,
+            leftEyeXPercent = 43.2f,
+            rightEyeXPercent = 52.5f,
+            eyeYPercent = 16.8f
         ),
-        gradientColors = listOf(Color(0xFFFEF3C7), Color(0xFFFFEDD5), Color(0xFFFEE2E2)),
-        primaryColor = Color(0xFFEA580C)
+        gradientColors = listOf(Color(0xFFF1F5F9), Color(0xFFE2E8F0), Color(0xFFFEF3C7)),
+        primaryColor = Color(0xFF475569)
     ),
     AvatarModel(
-        id = "female_cat",
-        name = "Luna Kitty",
-        species = "Fluffy Calico Kitten",
-        icon = "🎀",
-        imageRes = R.drawable.female_cat,
-        defaultPitch = 1.85f,
-        defaultSpeed = 1.22f,
+        id = "sakura",
+        name = "Sakura",
+        species = "Cyan Kimono Teen",
+        icon = "🌸",
+        imageRes = R.drawable.sakura,
+        // Sweet youthful anime female voice
+        naturalPitch = 1.28f,
+        naturalSpeed = 1.02f,
         faceCoords = AvatarFaceCoords(
-            mouthXPercent = 66.0f,
-            mouthYPercent = 44.8f,
-            mouthWidthPercent = 9.5f,
-            leftEyeXPercent = 58.0f,
-            rightEyeXPercent = 73.0f,
-            eyeYPercent = 37.5f
-        ),
-        gradientColors = listOf(Color(0xFFFCE7F3), Color(0xFFF3E8FF), Color(0xFFE0E7FF)),
-        primaryColor = Color(0xFFDB2777)
-    ),
-    AvatarModel(
-        id = "female_human",
-        name = "Maya",
-        species = "Human Companion",
-        icon = "👧",
-        imageRes = R.drawable.female_human,
-        defaultPitch = 1.32f,
-        defaultSpeed = 1.05f,
-        faceCoords = AvatarFaceCoords(
-            mouthXPercent = 50.0f,
-            mouthYPercent = 22.8f,
-            mouthWidthPercent = 7.5f,
-            leftEyeXPercent = 46.2f,
+            mouthXPercent = 50.2f,
+            mouthYPercent = 21.8f,
+            mouthWidthPercent = 6.8f,
+            leftEyeXPercent = 46.5f,
             rightEyeXPercent = 53.8f,
-            eyeYPercent = 18.5f
+            eyeYPercent = 18.0f
         ),
-        gradientColors = listOf(Color(0xFFE0F2FE), Color(0xFFCCFBF1), Color(0xFFEDE9FE)),
+        gradientColors = listOf(Color(0xFFCCFBF1), Color(0xFFE0F2FE), Color(0xFFEDE9FE)),
         primaryColor = Color(0xFF0891B2)
     ),
     AvatarModel(
-        id = "dog",
-        name = "Barnaby Pup",
-        species = "Golden Retriever Pup",
-        icon = "🐶",
-        imageRes = R.drawable.dog,
-        defaultPitch = 0.82f,
-        defaultSpeed = 0.95f,
+        id = "elena",
+        name = "Elena",
+        species = "Ana de Armas Style",
+        icon = "✨",
+        imageRes = R.drawable.elena,
+        // Warm elegant adult female voice
+        naturalPitch = 1.15f,
+        naturalSpeed = 1.00f,
         faceCoords = AvatarFaceCoords(
-            mouthXPercent = 63.5f,
-            mouthYPercent = 37.8f,
-            mouthWidthPercent = 9.0f,
-            leftEyeXPercent = 58.0f,
-            rightEyeXPercent = 68.2f,
-            eyeYPercent = 25.0f
+            mouthXPercent = 50.8f,
+            mouthYPercent = 19.8f,
+            mouthWidthPercent = 7.2f,
+            leftEyeXPercent = 47.5f,
+            rightEyeXPercent = 54.2f,
+            eyeYPercent = 16.6f
         ),
-        gradientColors = listOf(Color(0xFFFEF3C7), Color(0xFFFFEDD5), Color(0xFFFFFBEB)),
-        primaryColor = Color(0xFFD97706)
+        gradientColors = listOf(Color(0xFFD1FAE5), Color(0xFFCCFBF1), Color(0xFFF5F5F4)),
+        primaryColor = Color(0xFF059669)
     )
 )
