@@ -17,6 +17,10 @@ export const AVATARS = [
       eyeY: 17.5,
       eyeWidth: 4.2,
       eyeHeight: 3.8,
+      skinTone: '#E5E7EB',
+      eyelidTone: '#374151',
+      lipTone: '#1F2937',
+      innerMouthTone: '#260D0D',
     },
     // Tailored voice profile: Natural human male voice
     voiceProfile: {
@@ -54,6 +58,10 @@ export const AVATARS = [
       eyeY: 16.8,
       eyeWidth: 4.4,
       eyeHeight: 4.0,
+      skinTone: '#CBD5E1',
+      eyelidTone: '#64748B',
+      lipTone: '#334155',
+      innerMouthTone: '#260B0B',
     },
     // Tailored voice profile: Human male teenager voice
     voiceProfile: {
@@ -91,6 +99,10 @@ export const AVATARS = [
       eyeY: 18.0,
       eyeWidth: 3.6,
       eyeHeight: 3.2,
+      skinTone: '#FDE68A',
+      eyelidTone: '#D97706',
+      lipTone: '#E11D48',
+      innerMouthTone: '#4C0519',
     },
     // Tailored voice profile: Sweet youthful Asian female voice
     voiceProfile: {
@@ -128,6 +140,10 @@ export const AVATARS = [
       eyeY: 16.6,
       eyeWidth: 3.6,
       eyeHeight: 3.2,
+      skinTone: '#FED7AA',
+      eyelidTone: '#C2410C',
+      lipTone: '#BE123C',
+      innerMouthTone: '#4C0519',
     },
     // Tailored voice profile: Warm, elegant adult female voice
     voiceProfile: {
